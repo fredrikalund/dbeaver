@@ -73,6 +73,7 @@ public class ContentEditorInput implements IPathEditorInput, IStatefulEditorInpu
     private boolean contentDetached = false;
     private File contentFile;
     private String fileCharset;
+    private boolean encodingSetExplicitly;
     private StringEditorInput.StringStorage stringStorage;
 
     public ContentEditorInput(
@@ -85,6 +86,7 @@ public class ContentEditorInput implements IPathEditorInput, IStatefulEditorInpu
         this.valueController = valueController;
         this.editorParts = editorParts;
         this.defaultPart = defaultPart;
+        this.encodingSetExplicitly = false;
         this.fileCharset = getDefaultEncoding();
         this.prepareContent(monitor);
     }
@@ -100,6 +102,7 @@ public class ContentEditorInput implements IPathEditorInput, IStatefulEditorInpu
         this.valueController = valueController;
         this.editorParts = editorParts;
         this.defaultPart = defaultPart;
+        this.encodingSetExplicitly = !CommonUtils.isEmpty(charset);
         this.fileCharset = CommonUtils.isEmpty(charset) ? getDefaultEncoding() : charset;
         this.prepareContent(monitor);
     }
@@ -115,6 +118,7 @@ public class ContentEditorInput implements IPathEditorInput, IStatefulEditorInpu
 
     public void refreshContent(DBRProgressMonitor monitor, IValueController valueController, @Nullable String charset) throws DBException {
         this.valueController = valueController;
+        this.encodingSetExplicitly = !CommonUtils.isEmpty(charset);
         this.fileCharset = CommonUtils.isEmpty(charset) ? getDefaultEncoding() : charset;
         this.prepareContent(monitor);
     }
@@ -344,6 +348,12 @@ public class ContentEditorInput implements IPathEditorInput, IStatefulEditorInpu
                 if (storage == null) {
                     log.warn("Can't get data from null storage");
                     return;
+                }
+                if (!encodingSetExplicitly) {
+                    String storageCharset = storage.getCharset();
+                    if (!CommonUtils.isEmpty(storageCharset)) {
+                        fileCharset = storageCharset;
+                    }
                 }
                 try (InputStream is = storage.getContentStream()) {
                     ContentUtils.copyStreams(is, storage.getContentLength(), os, monitor);
